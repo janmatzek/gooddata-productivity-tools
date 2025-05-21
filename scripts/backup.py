@@ -8,6 +8,7 @@ import logging
 import os
 import shutil
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Iterator, Optional, Type, TypeAlias
 
@@ -45,8 +46,15 @@ ch = logging.StreamHandler()
 ch.setFormatter(logging.Formatter(fmt=FORMAT))
 logger.addHandler(ch)
 
+# TODO: add colors to the logger (differentiate warning, error)
+# TODO: debug level logging ?
+
 LAYOUTS_DIR = "gooddata_layouts"
 LDM_DIR = "ldm"
+
+MAX_WORKERS = 4
+DEFAULT_BATCH_SIZE = 100
+FAILURE_CSV_FILE = f"failed_workspaces_{TIMESTAMP_SDK_FOLDER}.csv"
 
 
 class GoodDataRestApiError(Exception):
@@ -56,9 +64,18 @@ class GoodDataRestApiError(Exception):
 class BackupRestoreConfig:
     def __init__(self, conf_path: str):
         with open(conf_path, "r") as stream:
-            conf = yaml.safe_load(stream)
-            self.storage_type = conf["storage_type"]
-            self.storage = conf["storage"]
+            conf: dict = yaml.safe_load(stream)
+            self.storage_type: str = conf["storage_type"]
+            self.storage: dict[str, str] = conf["storage"]
+
+        batch_size = conf.get("batch_size", DEFAULT_BATCH_SIZE)
+
+        if not isinstance(batch_size, int):
+            raise ValueError(
+                f"Invalid batch size: {batch_size}. It should be an integer."
+            )
+
+        self.batch_size: int = batch_size
 
 
 class BackupStorage(abc.ABC):
@@ -578,6 +595,89 @@ def validate_args(args: argparse.Namespace) -> None:
         )
 
 
+def split_to_batches(
+    workspaces_to_export: list[str], batch_size: int
+) -> list[list[str]]:
+    """Splits the list of workspaces to into batches of the specified size.
+    The batch is respresented as a list of workspace IDs.
+    Returns a list of batches (i.e. list of lists of IDs)
+    """
+    # TODO: write more tests
+    list_of_batches = []
+    while workspaces_to_export:
+        batch = workspaces_to_export[:batch_size]
+        workspaces_to_export = workspaces_to_export[batch_size:]
+        list_of_batches.append(batch)
+
+    return list_of_batches
+
+
+def log_failed_batch(batch: list[str]) -> None:
+    if not Path(FAILURE_CSV_FILE).exists():
+        with open(FAILURE_CSV_FILE, "w") as log_file:
+            log_file.write("workspace_id\n")
+        logger.warning(f"Failed workspaces are stored in {FAILURE_CSV_FILE}")
+
+    lines = [f"{workspace_id}\n" for workspace_id in batch]
+    with open(FAILURE_CSV_FILE, "a") as log_file:
+        log_file.writelines(lines)
+
+
+def process_batch(
+    sdk: GoodDataSdk,
+    api: GDApi,
+    org_id: str,
+    storage: BackupStorage,
+    batch: list[str],
+) -> None:
+    # TODO: write a docstring
+    # TODO: write tests
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            get_workspace_export(sdk, api, tmpdir, org_id, batch)
+
+            archive_gooddata_layouts_to_zip(str(Path(tmpdir, org_id)))
+
+            storage.export(tmpdir, org_id)
+
+    except Exception as e:
+        log_failed_batch(batch)
+
+        logger.error(f"Error processing batch: {e}")
+
+
+def process_batches_synchronously(
+    sdk: GoodDataSdk,
+    api: GDApi,
+    org_id: str,
+    storage: BackupStorage,
+    batches: list[list[str]],
+) -> None:
+    num_batches = len(batches)
+    for index, batch in enumerate(batches):
+        logger.info(
+            f"Processing batch {index + 1} of {num_batches} with {len(batch)} workspaces."
+        )
+        process_batch(sdk, api, org_id, storage, batch)
+
+
+def process_batches_with_futures(
+    sdk: GoodDataSdk,
+    api: GDApi,
+    org_id: str,
+    storage: BackupStorage,
+    batches: list[list[str]],
+) -> None:
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        futures = [
+            executor.submit(process_batch, sdk, api, org_id, storage, batch)
+            for batch in batches
+        ]
+
+        for future in futures:
+            future.result()
+
+
 def main(args: argparse.Namespace) -> None:
     """Main function for the backup script."""
     sdk, api = create_client(args)
@@ -593,16 +693,22 @@ def main(args: argparse.Namespace) -> None:
         args.input_type, args.ws_csv, sdk
     )
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        get_workspace_export(sdk, api, tmpdir, org_id, workspaces_to_export)
+    batches = split_to_batches(workspaces_to_export, conf.batch_size)
 
-        archive_gooddata_layouts_to_zip(str(Path(tmpdir, org_id)))
+    logger.info(
+        f"Exporting {len(workspaces_to_export)} workspaces in {len(batches)} batches."
+    )
 
-        storage.export(tmpdir, org_id)
+    # TODO: process the batches in parallel to improve performance
+    process_batches_synchronously(sdk, api, org_id, storage, batches)
+    # process_batches_with_futures(sdk, api, org_id, storage, batches)
 
 
 if __name__ == "__main__":
+    start = datetime.datetime.now()
     parser: argparse.ArgumentParser = create_parser()
     args: argparse.Namespace = parser.parse_args()
     validate_args(args)
     main(args)
+    end = datetime.datetime.now()
+    logger.info(f"Backup finished in {end - start}")

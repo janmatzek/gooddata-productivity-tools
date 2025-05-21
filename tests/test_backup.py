@@ -470,3 +470,17 @@ def test_read_csv_input_too_many_columns() -> None:
         ):
             backup.read_csv_input_for_backup(path_to_csv)
     os.remove(path_to_csv)
+
+
+def test_split_to_batches():
+    workspaces = ["ws1", "ws2", "ws3", "ws4", "ws5"]
+    batch_size = 2
+    expected_batches = [
+        ["ws1", "ws2"],
+        ["ws3", "ws4"],
+        ["ws5"],
+    ]
+
+    result = backup.split_to_batches(workspaces, batch_size)
+
+    assert list(result) == expected_batches
