@@ -1,0 +1,20 @@
+from dataclasses import dataclass, field
+
+
+@dataclass
+class UserDataFilterGroup:
+    udf_id: str
+    udf_values: list[str]
+
+
+@dataclass
+class WorkspaceUserDataFilters:
+    workspace_id: str
+    user_data_filters: list["UserDataFilterGroup"] = field(default_factory=list)
+
+
+@dataclass
+class UserDataFilter:
+    workspace_id: str
+    udf_id: str
+    udf_value: str
