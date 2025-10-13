@@ -1,6 +1,5 @@
 # (C) 2025 GoodData Corporation
 import abc
-import argparse
 import csv
 import json
 import logging
@@ -27,8 +26,10 @@ from gooddata_sdk.catalog.workspace.declarative_model.workspace.workspace import
     CatalogDeclarativeFilterView,
 )
 from gooddata_sdk.sdk import GoodDataSdk
-from utils.constants import DirNames, GoodDataProfile  # type: ignore[import]
-from utils.logger import setup_logging  # type: ignore[import]
+from utils.args.parser import Parser
+from utils.args.schemas import RestoreArgs
+from utils.constants import DirNames
+from utils.logger import setup_logging
 
 BEARER_TKN_PREFIX = "Bearer"
 
@@ -222,34 +223,6 @@ class GDApi:
             f"{method} to {url} failed - "
             f"response_code={response.status_code} message={response.text}"
         )
-
-
-def create_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "ws_csv", type=Path, help="Path to csv with IDs of GD workspaces to restore."
-    )
-    parser.add_argument(
-        "conf", type=Path, help="Path to backup storage configuration file."
-    )
-    parser.add_argument(
-        "-p",
-        "--profile-config",
-        type=Path,
-        default=GoodDataProfile.PROFILE_PATH,
-        help="Optional path to GoodData profile config. "
-        f'If no path is provided, "{GoodDataProfile.PROFILE_PATH}" is used.',
-    )
-    parser.add_argument(
-        "--profile",
-        type=str,
-        default="default",
-        help='GoodData profile to use. If not profile is provided, "default" is used.',
-    )
-    parser.add_argument(
-        "-v", "--verbose", action="store_true", help="Turns on the debug log output."
-    )
-    return parser
 
 
 def read_targets_from_csv(csv_path: str) -> dict[str, str]:
@@ -567,7 +540,7 @@ def create_api_client_from_profile(profile: str, profile_config: Path) -> GDApi:
     return GDApi(hostname, token)
 
 
-def create_client(args: argparse.Namespace) -> tuple[GoodDataSdk, GDApi]:
+def create_client(args: RestoreArgs) -> tuple[GoodDataSdk, GDApi]:
     """Creates GoodData SDK and API clients."""
     gdc_auth_token = os.environ.get("GDC_AUTH_TOKEN")
     gdc_hostname = os.environ.get("GDC_HOSTNAME")
@@ -591,33 +564,19 @@ def create_client(args: argparse.Namespace) -> tuple[GoodDataSdk, GDApi]:
     )
 
 
-def validate_args(args: argparse.Namespace) -> None:
-    """Validates the arguments provided."""
-    if not os.path.exists(args.ws_csv):
-        raise RuntimeError("Invalid path to csv given.")
-
-    if not os.path.exists(args.conf):
-        raise RuntimeError("Invalid path to backup storage configuration given.")
-
-
 def restore():
     """Main entry point of the script."""
 
-    parser = create_parser()
-    args = parser.parse_args()
-    validate_args(args)
-
-    if args.verbose:
-        logger.setLevel(logging.DEBUG)
+    args: RestoreArgs = Parser.parse_restore_args()
 
     sdk, api = create_client(args)
 
-    conf = BackupRestoreConfig(args.conf)
+    conf = BackupRestoreConfig(str(args.conf))
 
     cls_storage: type[BackupStorage] = get_storage(conf.storage_type)
     storage = cls_storage(conf)
 
-    ws_paths = read_targets_from_csv(args.ws_csv)
+    ws_paths = read_targets_from_csv(str(args.ws_csv))
     validate_targets(sdk, ws_paths)
 
     restore_worker = RestoreWorker(sdk, api, storage, ws_paths)

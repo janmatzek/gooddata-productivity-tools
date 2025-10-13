@@ -10,101 +10,24 @@
 #
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import argparse
-import os
-import re
-from pathlib import Path
+
+from typing import Any
 
 from gooddata_pipelines import (
     UserGroupIncrementalLoad,
     UserGroupProvisioner,
 )
-from gooddata_sdk.utils import PROFILES_FILE_PATH
-from utils.logger import get_logger, setup_logging  # type: ignore[import]
-from utils.utils import (  # type: ignore[import]
-    create_client,
-    read_csv_file_to_dict,
-)
+from utils.args.parser import Parser
+from utils.args.schemas import UserGroupArgs
+from utils.logger import get_logger, setup_logging
+from utils.utils import create_client, read_csv_file_to_dict
 
 setup_logging()
 logger = get_logger(__name__)
 
-UG_REGEX = r"^(?!\.)[.A-Za-z0-9_-]{1,255}$"
-
-
-def create_parser() -> argparse.ArgumentParser:
-    """Creates an argument parser."""
-    parser = argparse.ArgumentParser(description="Management of users and userGroups.")
-    parser.add_argument(
-        "user_group_csv", type=Path, help="Path to csv with user groups definition."
-    )
-    parser.add_argument(
-        "-d",
-        "--delimiter",
-        type=str,
-        default=",",
-        help="Delimiter used to separate different columns in the user_group_csv.",
-    )
-    parser.add_argument(
-        "-u",
-        "--ug_delimiter",
-        type=str,
-        default="|",
-        help=(
-            "Delimiter used to separate different parent user groups within "
-            "the parent user group column in the user_group_csv. "
-            'This must differ from the "delimiter" argument.'
-        ),
-    )
-    parser.add_argument(
-        "-q",
-        "--quotechar",
-        type=str,
-        default='"',
-        help=(
-            "Character used for quoting (escaping) values "
-            "which contain delimiters or quotechars."
-        ),
-    )
-    parser.add_argument(
-        "-p",
-        "--profile-config",
-        type=Path,
-        default=PROFILES_FILE_PATH,
-        help="Optional path to GoodData profile config. "
-        f'If no path is provided, "{PROFILES_FILE_PATH}" is used.',
-    )
-    parser.add_argument(
-        "--profile",
-        type=str,
-        default="default",
-        help='GoodData profile to use. If no profile is provided, "default" is used.',
-    )
-    return parser
-
-
-def validate_args(args: argparse.Namespace) -> None:
-    """Validates the arguments provided."""
-    if not os.path.exists(args.user_group_csv):
-        raise RuntimeError("Invalid path to user management input csv given.")
-
-    if args.delimiter == args.ug_delimiter:
-        raise RuntimeError(
-            "Delimiter and ParentUserGroups Delimiter cannot be the same."
-        )
-
-    if args.ug_delimiter == "." or re.match(UG_REGEX, args.ug_delimiter):
-        raise RuntimeError(
-            'ParentUserGroups delimiter cannot be dot (".") '
-            f'or match the following regex: "{UG_REGEX}".'
-        )
-
-    if len(args.quotechar) != 1:
-        raise RuntimeError("The quotechar argument must be exactly one character long.")
-
 
 def read_users_groups_from_csv(
-    args: argparse.Namespace,
+    args: UserGroupArgs,
 ) -> list[UserGroupIncrementalLoad]:
     """Reads users from csv file."""
     user_groups: list[UserGroupIncrementalLoad] = []
@@ -112,12 +35,12 @@ def read_users_groups_from_csv(
         args.user_group_csv, args.delimiter, args.quotechar
     )
     for raw_user_group in raw_user_groups:
-        processed_user_group = dict(raw_user_group)
+        processed_user_group: dict[str, Any] = dict(raw_user_group)
         parent_user_groups = raw_user_group["parent_user_groups"]
 
         if parent_user_groups:
             processed_user_group["parent_user_groups"] = parent_user_groups.split(
-                args.ug_delimiter
+                args.inner_delimiter
             )
         else:
             processed_user_group["parent_user_groups"] = []
@@ -136,12 +59,9 @@ def read_users_groups_from_csv(
 def user_group_mgmt():
     """Main function for user management."""
 
-    parser = create_parser()
-    args = parser.parse_args()
+    args = Parser.parse_user_group_args()
 
     try:
-        validate_args(args)
-
         provisioner = create_client(
             UserGroupProvisioner, args.profile_config, args.profile
         )

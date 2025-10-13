@@ -5,7 +5,7 @@ import csv
 import logging
 import os
 from pathlib import Path
-from typing import Protocol, Type
+from typing import Any, Protocol, Type, TypeVar, cast
 
 logger = logging.getLogger(__name__)
 
@@ -24,9 +24,12 @@ class PipelinesClient(Protocol):
         pass
 
 
+T = TypeVar("T", bound="PipelinesClient")
+
+
 def read_csv_file_to_dict(
-    file_path: str, delimiter: str = ",", quotechar: str = '"'
-) -> list[dict[str, str]]:
+    file_path: Path, delimiter: str = ",", quotechar: str = '"'
+) -> list[dict[str, Any]]:
     """Read a CSV file and return its content as a list of dictionaries.
 
     Args:
@@ -39,21 +42,22 @@ def read_csv_file_to_dict(
         return list(csv.DictReader(file, delimiter=delimiter, quotechar=quotechar))
 
 
-def create_client(
-    client_type: Type[PipelinesClient], profile_config: Path, profile: str
-) -> PipelinesClient:
+def create_client(client_type: Type[T], profile_config: Path, profile: str) -> T:
     """Creates GoodData Pipelines client of given type."""
     gdc_auth_token = os.environ.get("GDC_AUTH_TOKEN")
     gdc_hostname = os.environ.get("GDC_HOSTNAME")
 
     if gdc_hostname and gdc_auth_token:
         logger.info("Using GDC_HOSTNAME and GDC_AUTH_TOKEN envvars.")
-        return client_type.create(host=gdc_hostname, token=gdc_auth_token)
+        return cast(T, client_type.create(host=gdc_hostname, token=gdc_auth_token))
 
     if os.path.exists(profile_config):
         logger.info(f"Using GoodData profile {profile} sourced from {profile_config}.")
-        return client_type.create_from_profile(
-            profile=profile, profiles_path=profile_config
+        return cast(
+            T,
+            client_type.create_from_profile(
+                profile=profile, profiles_path=profile_config
+            ),
         )
 
     raise RuntimeError(

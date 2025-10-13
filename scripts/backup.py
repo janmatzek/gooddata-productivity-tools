@@ -1,6 +1,5 @@
 # (C) 2025 GoodData Corporation
 import abc
-import argparse
 import json
 import logging
 import os
@@ -16,18 +15,19 @@ import boto3  # type: ignore[import]
 import requests
 import yaml
 from gooddata_sdk.sdk import GoodDataSdk
-from utils.backup_utils.input_loader import InputLoader  # type: ignore[import]
-from utils.constants import (  # type: ignore[import]
+from utils.args.parser import Parser
+from utils.args.schemas import BackupArgs
+from utils.backup_utils.input_loader import InputLoader
+from utils.constants import (
     BackupSettings,
     DirNames,
-    GoodDataProfile,
 )
-from utils.gd_api import (  # type: ignore[import]
+from utils.gd_api import (
     GDApi,
     GoodDataRestApiError,
 )
-from utils.logger import setup_logging  # type: ignore[import]
-from utils.models.batch import BackupBatch, Size  # type: ignore[import]
+from utils.logger import setup_logging
+from utils.models.batch import BackupBatch, Size
 
 setup_logging()
 module_name = __file__.split(os.sep)[-1]
@@ -152,44 +152,6 @@ def create_api_client_from_profile(profile: str, profile_config: Path) -> GDApi:
     profile_conf = config[profile]
     hostname, token = profile_conf["host"], profile_conf["token"]
     return GDApi(hostname, token)
-
-
-def create_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument(
-        "ws_csv",
-        help="Path to csv with IDs of GD workspaces to backup.",
-        type=Path,
-        nargs="?",
-    )
-    parser.add_argument(
-        "conf", help="Path to backup storage configuration file.", type=Path
-    )
-    parser.add_argument(
-        "-p",
-        "--profile-config",
-        type=Path,
-        default=GoodDataProfile.PROFILE_PATH,
-        help="Optional path to GoodData profile config. "
-        f'If no path is provided, "{GoodDataProfile.PROFILE_PATH}" is used.',
-    )
-    parser.add_argument(
-        "--profile",
-        type=str,
-        default="default",
-        help='GoodData profile to use. If not profile is provided, "default" is used.',
-    )
-    parser.add_argument(
-        "-t",
-        "--input-type",
-        type=str,
-        choices=["list-of-workspaces", "list-of-parents", "entire-organization"],
-        default="list-of-workspaces",
-        help="Type of input to use as the base of the backup. If not provided, `list-of-workspaces` is used as default.",
-    )
-
-    return parser
 
 
 def write_to_yaml(folder, source):
@@ -363,7 +325,7 @@ def archive_gooddata_layouts_to_zip(folder: str) -> None:
             shutil.rmtree(target_subdir)
 
 
-def create_client(args: argparse.Namespace) -> tuple[GoodDataSdk, GDApi]:
+def create_client(args: BackupArgs) -> tuple[GoodDataSdk, GDApi]:
     """Creates a GoodData client."""
     gdc_auth_token = os.environ.get("GDC_AUTH_TOKEN")
     gdc_hostname = os.environ.get("GDC_HOSTNAME")
@@ -385,24 +347,6 @@ def create_client(args: argparse.Namespace) -> tuple[GoodDataSdk, GDApi]:
         "No GoodData credentials provided. Please export required ENVVARS "
         "(GDC_HOSTNAME, GDC_AUTH_TOKEN) or provide path to profile config."
     )
-
-
-def validate_args(args: argparse.Namespace) -> None:
-    """Validates the arguments provided."""
-    if args.input_type != "entire-organization":
-        if not args.ws_csv:
-            raise RuntimeError("Path to csv with workspace IDs is required.")
-        if not os.path.exists(args.ws_csv):
-            raise RuntimeError("Invalid path to csv given.")
-
-    if not os.path.exists(args.conf):
-        raise RuntimeError("Invalid path to backup storage configuration given.")
-
-    if args.input_type == "entire-organization" and args.ws_csv:
-        logger.warning(
-            "Input type is set to 'entire-organization', but a CSV file is provided. "
-            "The CSV file will be ignored."
-        )
 
 
 def split_to_batches(
@@ -509,20 +453,20 @@ def process_batches_in_parallel(
                 raise
 
 
-def main(args: argparse.Namespace) -> None:
+def main(args: BackupArgs) -> None:
     """Main function for the backup script."""
     sdk, api = create_client(args)
 
     org_id: str = sdk.catalog_organization.organization_id
 
-    conf: BackupRestoreConfig = BackupRestoreConfig(args.conf)
+    conf: BackupRestoreConfig = BackupRestoreConfig(str(args.conf))
 
     storage_class: Type[BackupStorage] = get_storage(conf.storage_type)
     storage: BackupStorage = storage_class(conf)
 
     loader = InputLoader(api, conf.api_page_size)
     workspaces_to_export: list[str] = loader.get_ids_to_backup(
-        args.input_type, args.ws_csv
+        args.input_type, str(args.ws_csv)
     )
 
     batches = split_to_batches(workspaces_to_export, conf.batch_size)
@@ -535,11 +479,9 @@ def main(args: argparse.Namespace) -> None:
 
 
 def backup():
-    parser: argparse.ArgumentParser = create_parser()
-    args: argparse.Namespace = parser.parse_args()
+    args: BackupArgs = Parser.parse_backup_args()
 
     try:
-        validate_args(args)
         main(args)
 
         logger.info("Backup completed!")
