@@ -1,6 +1,6 @@
 # GD Workspace Management
 
-Tool which helps manage child workspace entities in an GoodData organization.
+Tool which helps manage child workspace entities in a GoodData organization.
 
 Workspaces can be created, updated, and deleted. This includes applying Workspace Data Filter values, when provided in input.
 
@@ -8,15 +8,17 @@ Workspaces can be created, updated, and deleted. This includes applying Workspac
 
 The tool requires the following argument on input:
 
-- `filepath` - a path to a csv file defining workspace entities, their relevant attributes, workspace data filter configuration, and isActive state
+- `filepath` - a path to a CSV file defining workspace entities, their relevant attributes, workspace data filter configuration, and isActive state
 
-Some other, _optional_, arguments are:
+### Optional arguments
 
-- `-d | --delimiter` - column delimiter for the csv files. Use this to define how the csv is parsed. Default value is `,`
-- `-i | --inner-delimiter` - Workspace Data Filter values column delimiter. Use this to separate the different values defined in the `workspace_data_filter_values` column. Default value is `|`. Note that `--delimiter` and `--inner_delimiter` have to differ.
-- `-q | --quotechar` - quotation character used to escape special characters (such as the delimiter) within the column field value. Default value is `"` If you need to escape the quotechar itself, you have to embed it in quotechars and then double the quotation character (e.g.: `"some""string"` will yield `some"string`).
-- `-p | --profile-config` - optional path to GoodData profile config. If no path is provided, the default profiles file is used.
-- `--profile` - GoodData profile to use. If no profile is provided, `default` is used.
+The following optional arguments are available:
+
+- `-d, --delimiter` - Column delimiter for the CSV files. See [Common Arguments](../reference/COMMON_ARGUMENTS.md#-d---delimiter) for details.
+- `-i, --inner-delimiter` - Workspace Data Filter values column delimiter. See [Common Arguments](../reference/COMMON_ARGUMENTS.md#-i---inner-delimiter) for details.
+- `-q, --quotechar` - Quotation character for escaping special characters. See [Common Arguments](../reference/COMMON_ARGUMENTS.md#-q---quotechar) for details.
+- `-p, --profile-config` - Path to GoodData profile configuration file. See [Common Arguments](../reference/COMMON_ARGUMENTS.md#-p---profile-config) for details.
+- `--profile` - Name of GoodData profile to use. See [Common Arguments](../reference/COMMON_ARGUMENTS.md#--profile) for details.
 
 Use the tool like so:
 
@@ -30,6 +32,12 @@ If you would like to define custom delimiters, use the tool like so:
 python scripts/workspace_mgmt.py path/to/workspace_definitions.csv -d "," -i "|"
 ```
 
+To use a custom GoodData profile, use:
+
+```sh
+python scripts/workspace_mgmt.py path/to/workspace_definitions.csv -p path/to/profiles.yaml --profile customer
+```
+
 To show the help for using arguments, call:
 
 ```sh
@@ -40,7 +48,7 @@ python scripts/workspace_mgmt.py -h
 
 The input CSV file defines the workspace entities which you might want to manage. Note that GD organization workspaces that are not defined in the input will not be modified in any way.
 
-Following format of the csv is expected:
+The following CSV format is expected:
 
 | parent_id           | workspace_id                 | workspace_name               | workspace_data_filter_id | workspace_data_filter_values | is_active |
 | ------------------- | ---------------------------- | ---------------------------- | ------------------------ | ---------------------------- | --------- |

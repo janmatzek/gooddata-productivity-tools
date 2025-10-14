@@ -8,16 +8,18 @@ User Data Filters can be created, updated, and deleted based on CSV input.
 
 The tool requires the following arguments on input:
 
-- `filepath` - a path to a csv file defining user data filters, their values, and target workspace
+- `filepath` - a path to a CSV file defining user data filters, their values, and target workspace
 - `ldm_column_name` - LDM column name
 - `maql_column_name` - MAQL column name in the form `{attribute/dataset.field}`
 
-Some other, _optional_, arguments are:
+### Optional arguments
 
-- `-d | --delimiter` - column delimiter for the csv files. Use this to define how the csv is parsed. Default value is `,`
-- `-q | --quotechar` - quotation character used to escape special characters (such as the delimiter) within the column field value. Default value is `"` If you need to escape the quotechar itself, you have to embed it in quotechars and then double the quotation character (e.g.: `"some""string"` will yield `some"string`).
-- `-p | --profile-config` - optional path to GoodData profile config. If no path is provided, the default profiles file is used.
-- `--profile` - GoodData profile to use. If no profile is provided, `default` is used.
+The following optional arguments are available:
+
+- `-d, --delimiter` - Column delimiter for the CSV files. See [Common Arguments](../reference/COMMON_ARGUMENTS.md#-d---delimiter) for details.
+- `-q, --quotechar` - Quotation character for escaping special characters. See [Common Arguments](../reference/COMMON_ARGUMENTS.md#-q---quotechar) for details.
+- `-p, --profile-config` - Path to GoodData profile configuration file. See [Common Arguments](../reference/COMMON_ARGUMENTS.md#-p---profile-config) for details.
+- `--profile` - Name of GoodData profile to use. See [Common Arguments](../reference/COMMON_ARGUMENTS.md#--profile) for details.
 
 Use the tool like so:
 
@@ -31,6 +33,12 @@ If you would like to define custom delimiters, use the tool like so:
 python scripts/user_data_filter_mgmt.py path/to/udfs.csv ldm_column_name maql_column_name -d ","
 ```
 
+To use a custom GoodData profile, use:
+
+```sh
+python scripts/user_data_filter_mgmt.py path/to/udfs.csv ldm_column_name maql_column_name -p path/to/profiles.yaml --profile customer
+```
+
 To show the help for using arguments, call:
 
 ```sh
@@ -41,7 +49,7 @@ python scripts/user_data_filter_mgmt.py -h
 
 The input CSV file defines the user data filter values to be managed. All user data filters in all workspaces listed in the input will be overwritten based on the CSV content.
 
-Following format of the csv is expected:
+The following CSV format is expected:
 
 | workspace_id              | udf_id    | udf_value |
 | ------------------------- | --------- | --------- |

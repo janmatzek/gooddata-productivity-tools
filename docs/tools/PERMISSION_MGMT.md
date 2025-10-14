@@ -8,11 +8,16 @@ Goal of the tool is to help manage state of the user-workspace or userGroup-work
 
 The tool requires the following argument on input:
 
-- `perm_csv` - a path to a csv file defining workspace permissions bound to specific ws_id-user or ws_id-userGroup pairs and the permissions isActive state
+- `perm_csv` - a path to a CSV file defining workspace permissions bound to specific ws_id-user or ws_id-userGroup pairs and the permissions isActive state
 
-Some other, _optional_, arguments are:
+### Optional arguments
 
-- `-d | --delimiter` - column delimiter for the csv files. Use this to define how the csv is parsed. Default value is "`,`"
+The following optional arguments are available:
+
+- `-d, --delimiter` - Column delimiter for the CSV files. See [Common Arguments](../reference/COMMON_ARGUMENTS.md#-d---delimiter) for details.
+- `-q, --quotechar` - Quotation character for escaping special characters. See [Common Arguments](../reference/COMMON_ARGUMENTS.md#-q---quotechar) for details.
+- `-p, --profile-config` - Path to GoodData profile configuration file. See [Common Arguments](../reference/COMMON_ARGUMENTS.md#-p---profile-config) for details.
+- `--profile` - Name of GoodData profile to use. See [Common Arguments](../reference/COMMON_ARGUMENTS.md#--profile) for details.
 
 Use the tool like so:
 
@@ -20,12 +25,18 @@ Use the tool like so:
 python scripts/permission_mgmt.py perm_csv
 ```
 
-Where `perm_csv` refers to input csv.
+Where `perm_csv` refers to the input CSV file.
 
 If you would like to define custom delimiter, use the tool like so:
 
 ```sh
 python scripts/permission_mgmt.py perm_csv -d ","
+```
+
+To use a custom GoodData profile, use:
+
+```sh
+python scripts/permission_mgmt.py perm_csv -p path/to/profiles.yaml --profile customer
 ```
 
 To show the help for using arguments, call:
@@ -38,9 +49,9 @@ python scripts/permission_mgmt.py -h
 
 The input CSV file defines the workspace permissions which you might want to manage.
 
-[Example input csv.](examples/permission_mgmt/input.csv)
+[Example input CSV.](../examples/permission_mgmt/input.csv)
 
-Following format of the csv is expected:
+The following CSV format is expected:
 
 | user_id | ug_id | ws_id   | ws_permissions | is_active |
 | ------- | ----- | ------- | -------------- | --------- |

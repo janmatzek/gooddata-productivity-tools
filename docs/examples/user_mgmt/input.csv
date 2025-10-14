@@ -1,4 +1,4 @@
-user_id, firstname, lastname, email, auth_id, user_groups, is_active
+user_id,firstname,lastname,email,auth_id,user_groups,is_active
 jozef.mrkva,jozef,mrkva,jozef.mrkva@test.com,auth_id_1,,True
 bartolomej.brokolica,,,,,,False
 peter.pertzlen,peter,pertzlen,peter.pertzlen@test.com,auth_id_3,ug_1|ug_2,True

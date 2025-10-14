@@ -8,11 +8,15 @@ The tool requires the following argument:
 
 - `user_group_csv` - a path to a CSV file that defines the user groups, their names, parent user groups, and active status.
 
-Optional arguments include:
+### Optional arguments
 
-- `-d | --delimiter` - column delimiter for the CSV files. This defines how the CSV is parsed. The default value is "`,`".
-- `-u | --ug_delimiter` - delimiter used to separate different parent user groups within the parent user group column. This must differ from the "delimiter" argument. Default value is "`|`".
-- `-q | --quotechar` - quotation character used to escape special characters (such as the delimiter) within the column values. The default value is '`"`'. If you need to escape the quotechar itself, you have to embed it in quotechars and then double the quotation character (e.g.: `"some""string"` will yield `some"string`).
+The following optional arguments are available:
+
+- `-d, --delimiter` - Column delimiter for the CSV files. See [Common Arguments](../reference/COMMON_ARGUMENTS.md#-d---delimiter) for details.
+- `-i, --inner-delimiter` - Delimiter for parent user groups within a column. See [Common Arguments](../reference/COMMON_ARGUMENTS.md#-i---inner-delimiter) for details.
+- `-q, --quotechar` - Quotation character for escaping special characters. See [Common Arguments](../reference/COMMON_ARGUMENTS.md#-q---quotechar) for details.
+- `-p, --profile-config` - Path to GoodData profile configuration file. See [Common Arguments](../reference/COMMON_ARGUMENTS.md#-p---profile-config) for details.
+- `--profile` - Name of GoodData profile to use. See [Common Arguments](../reference/COMMON_ARGUMENTS.md#--profile) for details.
 
 Use the tool like so:
 
@@ -25,7 +29,13 @@ Where `user_group_csv` refers to the input CSV file.
 For custom delimiters, use the command:
 
 ```sh
-python scripts/user_group_mgmt.py user_group_csv -d "," -u "|"
+python scripts/user_group_mgmt.py user_group_csv -d "," -i "|"
+```
+
+To use a custom GoodData profile, use:
+
+```sh
+python scripts/user_group_mgmt.py user_group_csv -p path/to/profiles.yaml --profile customer
 ```
 
 To display help for using arguments, run:
@@ -38,9 +48,9 @@ python scripts/user_group_mgmt.py -h
 
 The input CSV file defines the user groups to be managed. User groups not defined in the input file will not be modified.
 
-[Example input CSV.](examples/user_group_mgmt/input.csv)
+[Example input CSV.](../examples/user_group_mgmt/input.csv)
 
-Expected CSV format:
+The following CSV format is expected:
 
 | user_group_id | user_group_name | parent_user_groups | is_active |
 | ------------- | --------------- | ------------------ | --------- |

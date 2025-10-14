@@ -6,21 +6,24 @@ This section contains step by step guide how to set up authorization files eithe
 
 ### GUI
 
-In Finder, go to your current user home directory by pressing 
+In Finder, go to your current user home directory by pressing
+
 ```sh
 CMD+SHIFT+H
 ```
 
 And subsequently reveal hidden folders by
+
 ```sh
 CMD+SHIFT+.
 ```
+
 Now you can create required folders and files manually. To hide folders afterwards, press the same combination.
 
 ### Terminal
 
 1. Open Terminal
-2. You should be in your current user home directory. You can check it by executing 
+2. You should be in your current user home directory. You can check it by executing
 
 ```sh
 pwd
@@ -31,7 +34,7 @@ Expected result: /Users/{your_username}
 If thats not the case, run
 
 ```sh
-cd ~ 
+cd ~
 ```
 
 Create directories `.aws` and `.gooddata` by executing following statements:
@@ -50,6 +53,7 @@ nano .aws/credentials
 Populate the credentials file with appropriate credentials.
 
 Format:
+
 ```
 [default]
 aws_access_key_id = some_access_key_id
@@ -59,8 +63,8 @@ aws_secret_access_key = some_access_key
 aws_access_key_id = other_access_key_id
 aws_secret_access_key = other_access_key
 ```
-Save by pressing ctrl+X, Y and Enter.
 
+Save by pressing ctrl+X, Y and Enter.
 
 Now create create `profiles.yaml` file within the `.gooddata` folder:
 
@@ -68,7 +72,8 @@ Now create create `profiles.yaml` file within the `.gooddata` folder:
 nano .gooddata/profiles.yaml
 ```
 
-Format:  
+Format:
+
 ```yaml
 default:
   host: https://host.name.cloud.gooddata.com/
@@ -78,8 +83,8 @@ customer:
   host: https://customer.hostname.cloud.gooddata.com/
   token: other_auth_token
 ```
-Save by pressing ctrl+X, Y and Enter.
 
+Save by pressing ctrl+X, Y and Enter.
 
 ## Windows
 
