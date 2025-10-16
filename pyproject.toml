@@ -3,6 +3,7 @@ target-version = ['py311']
 
 [tool.mypy]
 python_version = "3.11"
+mypy_path = ["${MYPY_CONFIG_FILE_DIR}/scripts"]
 
 [[tool.mypy.overrides]]
 module = [
@@ -17,7 +18,8 @@ module = [
     "requests.*",
 ]
 ignore_missing_imports = true
+check_untyped_defs = true
+
 
 [tool.ruff]
-# Aligned with the default line length of Black
 line-length = 88

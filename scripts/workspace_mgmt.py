@@ -1,13 +1,11 @@
 # (C) 2025 GoodData Corporation
-import argparse
-import os
-from pathlib import Path
+
 from typing import Any
 
 from gooddata_pipelines import WorkspaceIncrementalLoad, WorkspaceProvisioner
-from gooddata_sdk.utils import PROFILES_FILE_PATH
-from utils.logger import get_logger, setup_logging  # type: ignore[import]
-from utils.utils import (  # type: ignore[import]
+from utils.args.parser import Parser
+from utils.logger import get_logger, setup_logging
+from utils.utils import (
     create_client,
     read_csv_file_to_dict,
 )
@@ -15,69 +13,6 @@ from utils.utils import (  # type: ignore[import]
 # Setup logging
 setup_logging()
 logger = get_logger(__name__)
-
-
-def create_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Management of workspaces.")
-    parser.add_argument(
-        "filepath",
-        type=Path,
-        help="Path to CSV file with input data.",
-    )
-    parser.add_argument(
-        "-d",
-        "--delimiter",
-        type=str,
-        default=",",
-        help="Delimiter used to separate different columns in the workspace_csv.",
-    )
-    parser.add_argument(
-        "-i",
-        "--inner-delimiter",
-        type=str,
-        default="|",
-        help=(
-            "Delimiter used to separate different inner values within "
-            "the columns in the input csv which contain inner-delimiter separated values. "
-            'This must differ from the "delimiter" argument.'
-        ),
-    )
-    parser.add_argument(
-        "-q",
-        "--quotechar",
-        type=str,
-        default='"',
-        help=(
-            "Character used for quoting (escaping) values "
-            "which contain delimiters or quotechars."
-        ),
-    )
-    parser.add_argument(
-        "-p",
-        "--profile-config",
-        type=Path,
-        default=PROFILES_FILE_PATH,
-        help="Optional path to GoodData profile config. "
-        f'If no path is provided, "{PROFILES_FILE_PATH}" is used.',
-    )
-    parser.add_argument(
-        "--profile",
-        type=str,
-        default="default",
-        help='GoodData profile to use. If no profile is provided, "default" is used.',
-    )
-    return parser
-
-
-def validate_args(args: argparse.Namespace) -> None:
-    """Validates the input arguments."""
-    if not os.path.exists(args.filepath):
-        raise RuntimeError("Invalid path to input csv given.")
-
-    if args.delimiter == args.inner_delimiter:
-        raise RuntimeError(
-            "Delimiter and Workspace Data Filter Delimiter cannot be the same."
-        )
 
 
 def validate_workspace_data(
@@ -119,10 +54,7 @@ def workspace_mgmt():
     """Main function for workspace management."""
 
     # Create parser and parse arguments
-    parser = create_parser()
-    args = parser.parse_args()
-
-    validate_args(args)
+    args = Parser.parse_workspace_args()
 
     # Read CSV input
     raw_workspaces = read_csv_file_to_dict(

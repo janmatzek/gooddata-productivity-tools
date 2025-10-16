@@ -1,9 +1,5 @@
 # GoodData Python SDK packages
 gooddata_sdk>=1.52
-gooddata-pipelines>=1.52
+gooddata-pipelines>=1.52.1.dev3
 
-# Other dependencies
-# TODO: remove after full transition to GoodData SDK packages
-requests
-boto3
-pydantic
+pyyaml

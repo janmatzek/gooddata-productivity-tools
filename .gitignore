@@ -33,4 +33,5 @@ cover/
 **.env
 
 # Include sample and test config files
-!tests/data/backup/test_local_conf.yaml
+!tests/data/**
+!docs/**

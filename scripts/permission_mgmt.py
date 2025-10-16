@@ -1,16 +1,14 @@
 # (C) 2025 GoodData Corporation
-import argparse
-import os
-from pathlib import Path
 
 from gooddata_pipelines import (
     EntityType,
     PermissionIncrementalLoad,
     PermissionProvisioner,
 )
-from gooddata_sdk.utils import PROFILES_FILE_PATH
-from utils.logger import get_logger, setup_logging  # type: ignore[import]
-from utils.utils import (  # type: ignore[import]
+from utils.args.parser import Parser
+from utils.args.schemas import PermissionArgs
+from utils.logger import get_logger, setup_logging
+from utils.utils import (
     create_client,
     read_csv_file_to_dict,
 )
@@ -19,46 +17,14 @@ setup_logging()
 logger = get_logger(__name__)
 
 
-def create_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Management of workspace permissions.")
-    parser.add_argument(
-        "perm_csv",
-        type=Path,
-        help=(
-            "Path to (comma-delimited) csv with user/userGroup "
-            "to workspace permission pairs."
-        ),
-    )
-    parser.add_argument(
-        "-d",
-        "--delimiter",
-        type=str,
-        default=",",
-        help="Delimiter used to separate different columns in the user_csv.",
-    )
-    parser.add_argument(
-        "-p",
-        "--profile-config",
-        type=Path,
-        default=PROFILES_FILE_PATH,
-        help="Optional path to GoodData profile config. "
-        f'If no path is provided, "{PROFILES_FILE_PATH}" is used.',
-    )
-    parser.add_argument(
-        "--profile",
-        type=str,
-        default="default",
-        help='GoodData profile to use. If not profile is provided, "default" is used.',
-    )
-    return parser
-
-
 def read_permissions_from_csv(
-    args: argparse.Namespace,
+    args: PermissionArgs,
 ) -> list[PermissionIncrementalLoad]:
     """Reads permissions from the input csv file."""
     validated_permissions: list[PermissionIncrementalLoad] = []
-    raw_permissions = read_csv_file_to_dict(args.perm_csv, args.delimiter)
+    raw_permissions = read_csv_file_to_dict(
+        args.perm_csv, args.delimiter, args.quotechar
+    )
 
     for raw_permission in raw_permissions:
         try:
@@ -100,17 +66,8 @@ def read_permissions_from_csv(
     return validated_permissions
 
 
-def validate_args(args: argparse.Namespace) -> None:
-    """Validates the input arguments."""
-    if not os.path.exists(args.perm_csv):
-        raise RuntimeError(
-            "Invalid path to workspace permission management input csv given."
-        )
-
-
 def permission_mgmt():
-    parser = create_parser()
-    args = parser.parse_args()
+    args = Parser.parse_permission_args()
 
     permissions = read_permissions_from_csv(args)
 

@@ -1,73 +1,19 @@
 # (C) 2025 GoodData Corporation
-import argparse
+
 import csv
-import os
-import re
 from pathlib import Path
 
 from gooddata_pipelines import UserIncrementalLoad, UserProvisioner
-from gooddata_sdk.utils import PROFILES_FILE_PATH
-from utils.logger import get_logger, setup_logging  # type: ignore[import]
-from utils.utils import create_client  # type: ignore[import]
-
-UG_REGEX = r"^(?!\.)[.A-Za-z0-9_-]{1,255}$"
+from utils.args.parser import Parser
+from utils.logger import get_logger, setup_logging
+from utils.utils import create_client
 
 setup_logging()
 logger = get_logger(__name__)
 
 
-def create_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Management of users and userGroups.")
-    parser.add_argument(
-        "user_csv", type=Path, help="Path to csv with user definitions."
-    )
-    parser.add_argument(
-        "-d",
-        "--delimiter",
-        type=str,
-        default=",",
-        help="Delimiter used to separate different columns in the user_csv.",
-    )
-    parser.add_argument(
-        "-u",
-        "--ug_delimiter",
-        type=str,
-        default="|",
-        help=(
-            "Delimiter used to separate different user groups within "
-            "the relevant user groups column in the user_csv. "
-            'This must differ from the "delimiter" argument.'
-        ),
-    )
-    parser.add_argument(
-        "-q",
-        "--quotechar",
-        type=str,
-        default='"',
-        help=(
-            "Character used for quoting (escaping) values "
-            "which contain delimiters or quotechars."
-        ),
-    )
-    parser.add_argument(
-        "-p",
-        "--profile-config",
-        type=Path,
-        default=PROFILES_FILE_PATH,
-        help="Optional path to GoodData profile config. "
-        f'If no path is provided, "{PROFILES_FILE_PATH}" is used.',
-    )
-    parser.add_argument(
-        "--profile",
-        type=str,
-        default="default",
-        help='GoodData profile to use. If no profile is provided, "default" is used.',
-    )
-    return parser
-
-
 def read_users_from_csv(
-    path_to_csv: str, row_delimiter: str, quotechar: str, user_group_delimiter: str
+    path_to_csv: Path, row_delimiter: str, quotechar: str, user_group_delimiter: str
 ) -> list[UserIncrementalLoad]:
     """Reads users from csv file."""
 
@@ -106,33 +52,13 @@ def read_users_from_csv(
     return users
 
 
-def validate_args(args: argparse.Namespace) -> None:
-    """Validates the arguments provided."""
-    if not os.path.exists(args.user_csv):
-        raise RuntimeError("Invalid path to user management input csv given.")
-
-    if args.delimiter == args.ug_delimiter:
-        raise RuntimeError("Delimiter and UserGroups Delimiter cannot be the same.")
-
-    if args.ug_delimiter == "." or re.match(UG_REGEX, args.ug_delimiter):
-        raise RuntimeError(
-            'Usergroup delimiter cannot be dot (".") '
-            f'or match the following regex: "{UG_REGEX}".'
-        )
-
-    if len(args.quotechar) != 1:
-        raise RuntimeError("The quotechar argument must be exactly one character long.")
-
-
 def user_mgmt() -> None:
     """Main function for user management."""
 
-    parser = create_parser()
-    args = parser.parse_args()
-    validate_args(args)
+    args = Parser.parse_user_args()
 
     users = read_users_from_csv(
-        args.user_csv, args.delimiter, args.quotechar, args.ug_delimiter
+        args.user_csv, args.delimiter, args.quotechar, args.inner_delimiter
     )
 
     provisioner = create_client(UserProvisioner, args.profile_config, args.profile)
